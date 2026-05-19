@@ -597,16 +597,34 @@ async def delete_task(task_id: str, user: User = Depends(get_current_user)):
 
 @api.post("/planner/generate")
 async def planner_generate(payload: PlannerGenerate, user: User = Depends(get_current_user)):
+    # Cap window to keep LLM response under preview-ingress 60s timeout
+    from datetime import date as _d
+    try:
+        exam_d = _d.fromisoformat(payload.exam_date)
+        today_d = datetime.now(timezone.utc).date()
+        days_until = max(1, (exam_d - today_d).days)
+    except Exception:
+        days_until = 7
+    plan_days = min(days_until, 7)  # generate at most a week at a time
+    tasks_per_day = 2
+    max_tasks = plan_days * tasks_per_day
+    today_iso = today_str()
+
     system = (
         f"You are a study coach for a Class {user.class_grade or '10'} {user.board or 'CBSE'} student. "
-        f"Build a day-by-day study plan from today until {payload.exam_date}. "
-        f"Weak subjects to prioritise: {', '.join(payload.weak_subjects) or 'none specified'}. "
-        f"Available {payload.hours_per_day} hours/day. "
-        "Return ONLY JSON: {\"tasks\":[{\"date\":\"YYYY-MM-DD\",\"title\":\"...\",\"subject\":\"...\",\"duration_min\":60,\"notes\":\"...\"}]}. "
-        "Make titles specific (chapter names). Mix subjects across days. Include 1 revision slot every 3 days."
+        f"Today's date is {today_iso}. Build a {plan_days}-day plan starting from {today_iso}. "
+        f"Weak subjects to prioritise: {', '.join(payload.weak_subjects) or 'general revision'}. "
+        f"{payload.hours_per_day} hrs/day, {tasks_per_day} tasks/day. "
+        f"Return ONLY compact JSON, no markdown, max {max_tasks} tasks: "
+        '{"tasks":[{"date":"YYYY-MM-DD","title":"...","subject":"...","duration_min":45}]}. '
+        f"Dates MUST be sequential from {today_iso}. Keep titles under 8 words. No notes field."
     )
     session_id = f"plan_{user.user_id}_{uuid.uuid4().hex[:8]}"
-    raw = await llm_chat(system, "Build the plan now.", session_id)
+    try:
+        raw = await llm_chat(system, "Build the plan now.", session_id)
+    except Exception as e:
+        log.warning(f"planner LLM error: {e}")
+        raise HTTPException(503, "AI is busy. Please try again in a moment.")
     txt = raw.strip()
     if txt.startswith("```"):
         txt = _re.sub(r"^```(json)?", "", txt).strip()
@@ -616,17 +634,29 @@ async def planner_generate(payload: PlannerGenerate, user: User = Depends(get_cu
         data = _json.loads(txt)
     except Exception:
         m = _re.search(r"\{[\s\S]*\}", raw)
-        data = _json.loads(m.group(0)) if m else {"tasks": []}
+        try:
+            data = _json.loads(m.group(0)) if m else {"tasks": []}
+        except Exception:
+            data = {"tasks": []}
     created = []
-    for t in data.get("tasks", [])[:60]:
+    today_d = datetime.now(timezone.utc).date()
+    for idx, t in enumerate(data.get("tasks", [])[:max_tasks]):
+        # Force-correct date: if AI gave bad/stale date, distribute sequentially across plan_days
+        ai_date = t.get("date")
+        try:
+            d = _d.fromisoformat(ai_date) if ai_date else None
+        except Exception:
+            d = None
+        if not d or d < today_d:
+            d = today_d + timedelta(days=(idx // tasks_per_day) % plan_days)
         doc = {
             "task_id": f"task_{uuid.uuid4().hex[:12]}",
             "user_id": user.user_id,
-            "title": t.get("title", "Study"),
+            "title": t.get("title", "Study session"),
             "subject": t.get("subject"),
-            "date": t.get("date") or today_str(),
+            "date": d.isoformat(),
             "duration_min": int(t.get("duration_min", 45)),
-            "notes": t.get("notes"),
+            "notes": None,
             "completed": False,
             "ai_generated": True,
             "created_at": now_iso(),
@@ -736,5 +766,5 @@ async def get_papers(board: Optional[str] = None, class_grade: Optional[str] = N
 async def health():
     return {"ok": True, "service": "studybuddy", "time": now_iso()}
 
-# Remove the broken /auth/me placeholders by re-declaring last wins; FastAPI keeps all. To avoid the placeholder one, rebuild routes carefully -- handled by api_v2 above. Mount router last.
+# Mount the router
 app.include_router(api)
