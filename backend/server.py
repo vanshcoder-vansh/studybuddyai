@@ -50,7 +50,7 @@ api = APIRouter(prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in CORS_ORIGINS.split(",")] if CORS_ORIGINS != "*" else ["*"],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -236,7 +236,7 @@ async def google_session(request: Request, response: Response):
         max_age=7 * 24 * 3600,
     )
     user.pop("_id", None)
-    return {"user": user}
+    return {"user": user, "session_token": session_token}
 
 @api.post("/auth/logout")
 async def logout(response: Response, session_token: Optional[str] = Cookie(default=None)):

@@ -30,6 +30,8 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try { await api.post("/auth/logout"); } catch {}
     setUser(null);
+    sessionStorage.removeItem("sb_oauth_processed");
+    localStorage.removeItem("sb_session_token");
     window.location.href = "/";
   };
 
