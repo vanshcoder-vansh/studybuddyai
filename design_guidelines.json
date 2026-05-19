@@ -1,0 +1,150 @@
+{
+  "theme_archetype": {
+    "domain": "Education, Learning Platform, EdTech",
+    "theme": "LIGHT (with DARK mode support)",
+    "primary_archetype": "Archetype 6 (Vibrant Play) mixed with Archetype 4 (Swiss/Notion structural clarity)",
+    "vibe": "Organized, premium, engaging, encouraging. Blending the structural minimalism of Notion with the tactile, rewarding gamification of Duolingo.",
+    "reasoning": "Targeting Grade 6-12 students requires a balance: it must not be too childish (hence the clean Notion structure) but needs to remain highly engaging and motivating (hence the Duolingo gamification accents). A light theme is default for clarity in reading notes and answering questions."
+  },
+  "typography": {
+    "rules": {
+      "anti_default": "BANNED: Inter, Roboto, Open Sans. Do not use for headings or body.",
+      "typesetting": "Tight tracking for headings (tracking-tight), relaxed for body (leading-relaxed)."
+    },
+    "fonts": {
+      "headings": {
+        "family": "Outfit",
+        "weights": ["font-semibold", "font-bold", "font-extrabold"],
+        "usage": "Used for all H1-H6, expressive, modern, premium tech vibe."
+      },
+      "body": {
+        "family": "DM Sans",
+        "weights": ["font-normal", "font-medium"],
+        "usage": "Highly readable, friendly geometric sans for long-form study notes and chats."
+      },
+      "mono": {
+        "family": "JetBrains Mono",
+        "usage": "For code snippets in CS doubts or math formulas."
+      }
+    },
+    "scale": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-none",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight",
+      "h3": "text-xl sm:text-2xl font-bold",
+      "h4": "text-lg sm:text-xl font-semibold",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm text-muted-foreground",
+      "overline": "text-xs font-bold uppercase tracking-[0.2em]"
+    }
+  },
+  "colors": {
+    "rules": "NO PURPLE (#9D4CDD) AND NO TEAL (#1B93A4). Use a warm, energetic primary with high-contrast text.",
+    "light": {
+      "background": "#FAFAFA",
+      "surface": "#FFFFFF",
+      "primary": "#FF6B6B",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#0EA5E9",
+      "secondary_foreground": "#FFFFFF",
+      "accent_yellow": "#FBBF24",
+      "accent_green": "#10B981",
+      "text_main": "#0F172A",
+      "text_muted": "#64748B",
+      "border": "#E2E8F0"
+    },
+    "dark": {
+      "background": "#09090B",
+      "surface": "#18181B",
+      "primary": "#FF6B6B",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#0284C7",
+      "secondary_foreground": "#FFFFFF",
+      "accent_yellow": "#F59E0B",
+      "accent_green": "#059669",
+      "text_main": "#F8FAFC",
+      "text_muted": "#94A3B8",
+      "border": "#27272A"
+    },
+    "gamification": {
+      "streak_flame": "#F97316",
+      "xp_gem": "#3B82F6",
+      "mastery_gold": "#EAB308"
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous spacing. p-6 or p-8 for internal card padding to prevent text collision.",
+    "grids": {
+      "marketing": "MODE A (Tetris Grid). grid-cols-1 md:grid-cols-12 gap-8. Highly asymmetrical.",
+      "dashboard": "MODE B (Control Room). grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6. Dense but breathable. Widgets must stretch to h-full."
+    },
+    "radius": {
+      "cards": "rounded-3xl",
+      "buttons": "rounded-full",
+      "inputs": "rounded-2xl"
+    },
+    "constraints": {
+      "mobile_images": "max-h-[80vh] object-cover"
+    }
+  },
+  "surfaces": {
+    "marketing_hero": {
+      "style": "Solid or subtle gradient mesh.",
+      "overlay": "bg-white/30 in light mode, bg-black/40 in dark mode to ensure text contrast."
+    },
+    "dashboard_cards": {
+      "style": "Neumorphic Tactile variant.",
+      "classes": "bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+    },
+    "navigation_and_floating": {
+      "style": "Glassmorphism (Crystal Apple Variant)",
+      "classes": "backdrop-blur-xl bg-white/80 dark:bg-zinc-950/80 border-b border-slate-200/50 dark:border-zinc-800/50 shadow-sm"
+    }
+  },
+  "navigation": {
+    "mobile": "Bottom fixed navigation bar using Glassmorphism. Hide on marketing pages, show inside authenticated app.",
+    "desktop": "Left sidebar (w-64) for dashboard, Top sticky nav for marketing page.",
+    "links": "Must be highly visible, using primary accent color for active states."
+  },
+  "motion_and_interactions": {
+    "buttons": "Active scale down (active:scale-95), hover brightness increase.",
+    "lists": "Staggered entrance animations using framer-motion.",
+    "hover_states": "ALWAYS set explicit text color on hover (e.g., hover:bg-slate-100 hover:text-slate-900).",
+    "focus_states": "High contrast ring (focus:ring-2 focus:ring-primary focus:outline-none focus:ring-offset-2)."
+  },
+  "icons_and_assets": {
+    "icon_library": "lucide-react",
+    "instructions": "Use lucide-react with stroke-width 2.5 for a friendly, slightly bolder appearance.",
+    "media_urls": {
+      "hero_background": {
+        "url": "https://images.pexels.com/photos/7135013/pexels-photo-7135013.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Abstract soothing pastel gradient background. Use for the marketing hero section behind the content."
+      },
+      "hero_illustration": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/d3b249f1-897a-4782-a58b-b8a4cfaf5386/images/b65acc2192133249bb27ae0678df59cd6f70c966478846c91c19faa2e7fc700f.png",
+        "description": "3D render of a glowing lightbulb over an open book. Clean Apple-style. Use as the primary visual in the hero section."
+      },
+      "feature_study_dashboard": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/d3b249f1-897a-4782-a58b-b8a4cfaf5386/images/8aa3102fa4781d3963eefd3b83bd29ea267fd0bbcf8ae22426993c712cba2b07.png",
+        "description": "Minimalist 3D study desk. Use for the 'Study Planner / Features' section on the landing page."
+      },
+      "gamification_badges": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/d3b249f1-897a-4782-a58b-b8a4cfaf5386/images/d9b1e352695450e24a87ce58ce4b97abb2031da7d055a890676fe8f11c69379f.png",
+        "description": "3D gamification badges (stars, streaks). Use in the Dashboard for the Rewards/Leaderboard sections."
+      },
+      "testimonial_student": {
+        "url": "https://images.pexels.com/photos/33779090/pexels-photo-33779090.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Indian student studying with tablet. Use for Testimonials, About Us, or Community sections."
+      }
+    }
+  },
+  "component_instructions": {
+    "shadcn_customization": "Heavily customize Shadcn to remove the Vercel look. Increase border radius to rounded-2xl or rounded-3xl. Use generous padding.",
+    "forms": "Use Shadcn forms. Inputs should have rounded-2xl, soft bg (bg-slate-50 dark:bg-zinc-900), and high contrast text.",
+    "charts": "Use Recharts or Shadcn Charts. Avoid complex D3 for student stats. Keep data visualizations soft, rounded, and colorful.",
+    "gamification": "Create custom visual components for streaks, XP progress bars, and badges. Use absolute positioning and z-index for overlapping avatars or layered badges."
+  },
+  "accessibility_and_testing": {
+    "contrast": "Ensure text over pastel backgrounds meets APCA standards. Use dark text (#0F172A) on primary buttons if the background is light, otherwise use white.",
+    "test_ids": "CRITICAL: All interactive and key informational elements MUST include a data-testid attribute (e.g., data-testid='start-mock-test-button')."
+  }
+}
