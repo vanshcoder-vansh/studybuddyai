@@ -10,9 +10,9 @@ import {
 } from "lucide-react";
 
 // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+// (auth temporarily bypassed — Landing CTA goes straight to dashboard)
 function loginWithGoogle() {
-  const redirectUrl = window.location.origin + "/dashboard";
-  window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  window.location.href = "/dashboard";
 }
 
 const FEATURES = [

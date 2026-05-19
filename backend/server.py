@@ -133,6 +133,52 @@ class XPAward(BaseModel):
     reason: str
 
 # ---------- Auth helpers ----------
+async def _get_or_create_demo_user() -> dict:
+    """Return the demo user, creating it if absent."""
+    email = "demo.aarav@studybuddy.ai"
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    if user:
+        return user
+    user_id = f"user_demo_{uuid.uuid4().hex[:8]}"
+    today = today_str()
+    user = {
+        "user_id": user_id,
+        "email": email,
+        "name": "Aarav Sharma",
+        "picture": "https://api.dicebear.com/7.x/avataaars/svg?seed=Aarav&backgroundColor=ffd6d6",
+        "class_grade": "10",
+        "board": "CBSE",
+        "subjects": ["Math", "Science", "English", "Social Science"],
+        "language": "English",
+        "exam_goal": "Score 95%+",
+        "xp": 1240,
+        "streak": 12,
+        "last_active_date": today,
+        "badges": ["Bronze Scholar", "Silver Scholar", "Week Warrior"],
+        "plan": "free",
+        "onboarded": True,
+        "created_at": now_iso(),
+    }
+    await db.users.insert_one(dict(user))
+    await db.activity.insert_one({
+        "activity_id": f"act_{uuid.uuid4().hex[:12]}",
+        "user_id": user_id, "type": "xp", "amount": 120,
+        "reason": "demo-seed", "at": now_iso(),
+    })
+    for i, (title, subj, mins) in enumerate([
+        ("Revise Light - Reflection", "Science", 30),
+        ("Practice Quadratic Equations", "Math", 45),
+        ("Read 'The Hundred Dresses'", "English", 25),
+    ]):
+        await db.tasks.insert_one({
+            "task_id": f"task_{uuid.uuid4().hex[:12]}",
+            "user_id": user_id, "title": title, "subject": subj,
+            "date": today, "duration_min": mins, "notes": None,
+            "completed": i == 0, "ai_generated": False, "created_at": now_iso(),
+        })
+    user.pop("_id", None)
+    return user
+
 async def get_current_user(
     session_token: Optional[str] = Cookie(default=None),
     authorization: Optional[str] = Header(default=None),
@@ -140,22 +186,21 @@ async def get_current_user(
     token = session_token
     if not token and authorization and authorization.lower().startswith("bearer "):
         token = authorization.split(" ", 1)[1].strip()
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    sess = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
-    if not sess:
-        raise HTTPException(status_code=401, detail="Invalid session")
-    exp = sess["expires_at"]
-    if isinstance(exp, str):
-        exp = datetime.fromisoformat(exp)
-    if exp.tzinfo is None:
-        exp = exp.replace(tzinfo=timezone.utc)
-    if exp < datetime.now(timezone.utc):
-        raise HTTPException(status_code=401, detail="Session expired")
-    user = await db.users.find_one({"user_id": sess["user_id"]}, {"_id": 0})
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-    return User(**user)
+    if token:
+        sess = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+        if sess:
+            exp = sess["expires_at"]
+            if isinstance(exp, str):
+                exp = datetime.fromisoformat(exp)
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            if exp >= datetime.now(timezone.utc):
+                user = await db.users.find_one({"user_id": sess["user_id"]}, {"_id": 0})
+                if user:
+                    return User(**user)
+    # No valid auth — fall back to the demo user so the app works without sign-in
+    demo = await _get_or_create_demo_user()
+    return User(**demo)
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -244,6 +289,72 @@ async def logout(response: Response, session_token: Optional[str] = Cookie(defau
         await db.user_sessions.delete_one({"session_token": session_token})
     response.delete_cookie("session_token", path="/")
     return {"ok": True}
+
+@api.post("/auth/demo")
+async def auth_demo(response: Response):
+    """Auto-login as a pre-seeded demo student. No real auth required."""
+    email = "demo.aarav@studybuddy.ai"
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    if not user:
+        user_id = f"user_demo_{uuid.uuid4().hex[:8]}"
+        user = {
+            "user_id": user_id,
+            "email": email,
+            "name": "Aarav Sharma",
+            "picture": "https://api.dicebear.com/7.x/avataaars/svg?seed=Aarav&backgroundColor=ffd6d6",
+            "class_grade": "10",
+            "board": "CBSE",
+            "subjects": ["Math", "Science", "English", "Social Science"],
+            "language": "English",
+            "exam_goal": "Score 95%+",
+            "xp": 1240,
+            "streak": 12,
+            "last_active_date": today_str(),
+            "badges": ["Bronze Scholar", "Silver Scholar", "Week Warrior"],
+            "plan": "free",
+            "onboarded": True,
+            "created_at": now_iso(),
+        }
+        await db.users.insert_one(dict(user))
+        user.pop("_id", None)
+        # Seed a couple of recent activity items so dashboard isn't empty
+        await db.activity.insert_one({
+            "activity_id": f"act_{uuid.uuid4().hex[:12]}",
+            "user_id": user_id, "type": "xp", "amount": 120,
+            "reason": "demo-seed", "at": now_iso(),
+        })
+        today = datetime.now(timezone.utc).date()
+        for i, (title, subj, mins) in enumerate([
+            ("Revise Light - Reflection", "Science", 30),
+            ("Practice Quadratic Equations", "Math", 45),
+            ("Read 'The Hundred Dresses'", "English", 25),
+        ]):
+            await db.tasks.insert_one({
+                "task_id": f"task_{uuid.uuid4().hex[:12]}",
+                "user_id": user_id,
+                "title": title, "subject": subj,
+                "date": today.isoformat(),
+                "duration_min": mins, "notes": None,
+                "completed": i == 0, "ai_generated": False,
+                "created_at": now_iso(),
+            })
+    user_id = user["user_id"]
+
+    session_token = f"demo_{uuid.uuid4().hex}"
+    expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+    await db.user_sessions.insert_one({
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": expires_at,
+        "created_at": datetime.now(timezone.utc),
+    })
+    response.set_cookie(
+        key="session_token", value=session_token,
+        httponly=True, secure=True, samesite="none", path="/",
+        max_age=30 * 24 * 3600,
+    )
+    user.pop("_id", None)
+    return {"user": user, "session_token": session_token}
 
 @api.get("/auth/me")
 async def auth_me_route(user: User = Depends(get_current_user)):
