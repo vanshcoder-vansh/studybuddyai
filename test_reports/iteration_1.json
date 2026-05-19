@@ -1,0 +1,46 @@
+{
+  "summary": "First iteration testing for StudyBuddy AI. Backend pytest: 17/18 passed. Frontend: landing page renders all sections; auth-gated pages (dashboard, doubt, focus, formulas, more, notes, tests, planner, profile) all load correctly with seeded session cookie. Dashboard shows user 'Hey Aarav', stats cards (streak/XP/badges/class), XP chart, quick action tiles, today's plan, recent activity. Doubt Solver shows subject/style/language pickers and send box. Only one backend endpoint fails: POST /api/planner/generate (LLM call exceeds the preview ingress 60s timeout, returns 502 to user). Also observed an LLM budget-exceeded error in backend logs (intermittent).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/planner/generate", "issue": "Endpoint takes >90s (LLM generates large multi-day plan) and is killed by preview ingress 60s timeout returning 502. Reproduces consistently via external URL. Same call via localhost also exceeded 90s. Needs streaming / shorter prompt / smaller default window / async background job.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "LLM (all AI endpoints)", "issue": "Backend logs show 'litellm.BadRequestError: Budget has been exceeded! Current cost: 1.114, Max budget: 1.0' on some calls. EMERGENT_LLM_KEY may be near/over its budget. Chat/notes/tests/scan worked during this run, but AI calls may begin failing intermittently."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Doubt Solver", "issues": ["Uses native HTML <select> for Subject and Language pickers instead of shadcn Select component — looks inconsistent with the polished landing/dashboard design."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Fix POST /api/planner/generate to complete within the 60s preview ingress window. Options: (a) cap days/tasks generated (e.g. max 7 days at a time), (b) reduce prompt verbosity, (c) make it async/background returning a job_id + polling, or (d) split into per-day calls with parallel execution.",
+    "Verify Emergent LLM key budget — backend logs show LiteLLM 'Budget has been exceeded' errors. Get budget reset or new key to avoid intermittent AI failures.",
+    "Replace native <select> elements on Doubt Solver (and other forms if any) with shadcn Select for visual consistency."
+  ],
+  "critical_code_review_comments": [
+    "server.py line 740 comment says 'Remove the broken /auth/me placeholders by re-declaring last wins' — leftover stale comment referencing nonexistent code; cleanup recommended.",
+    "server.py is ~740 lines containing all routes + seed data + models — should be split into routers (auth, planner, notes, tests, ai_helpers) for maintainability.",
+    "/api/planner/generate uses raw json.loads on LLM output with broad except — risks 500s when AI returns non-JSON. Already wraps in try/except but the second json.loads can also throw; should be wrapped too with HTTPException(500, 'AI returned invalid format').",
+    "TaskUpdate.completed=False path: server only awards XP when payload.completed is truthy, but does not handle un-completing (toggling back) which is fine. No issue, just call out.",
+    "No rate limiting on AI endpoints — a single user could spam /chat /notes /tests/generate; consider per-user throttling.",
+    "/api/leaderboard returns ALL users (including test seeds); should filter test/dev users or paginate."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py (created)",
+    "/app/test_reports/iteration_1.json (created)"
+  ],
+  "success_rate": {"backend": "94% (17/18 endpoints)", "frontend": "100% pages load; deep interaction tests not run due to AI cost/time"},
+  "test_credentials": "Seed via mongosh per /app/memory/test_credentials.md. Token used during this run: test_session_1779202008228 (User: Aarav Sharma, Class 10 CBSE, onboarded=true).",
+  "seed_data_creation": "Created multiple TEST_-prefixed users + sessions in studybuddy_db. One user 'Aarav Sharma' with onboarded=true used for browser tests.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest at /app/backend/tests/backend_test.py covers all major endpoints (auth, profile, dashboard, chat, scan, notes CRUD, tests gen+submit, planner CRUD, planner_generate, formulas, papers, leaderboard, xp/award, logout). Use Bearer token from mongosh seed. Note: planner/generate will fail through external URL due to ingress timeout — test via localhost:8001 or use a fix-then-retest approach. Frontend routes are /dashboard /doubt /scan /notes /tests /planner /profile /formulas /focus /more (NOT /doubt-solver or /pomodoro). To browser-test auth pages, set cookie session_token via page.context.add_cookies.",
+  "rca_of_the_issue": "RCA — POST /api/planner/generate 502: The endpoint sends a single LLM call asking Gemini to produce a multi-week JSON study plan (one task per day for the period until exam_date, up to 60 tasks). Gemini-2.5-flash output of ~60 JSON entries with detailed titles+notes takes 70-90+ seconds. The Emergent preview ingress (kubernetes) closes the connection at ~60s, returning 502 'preview environment is not responding'. Reproduce: POST /api/planner/generate with exam_date=any (even 3 days away still times out >60s). Mitigation options: (1) generate in chunks of 3 days max, (2) reduce prompt verbosity dropping 'notes' field, (3) async job pattern: return 202 + job_id, poll GET /api/planner/generate/{job_id}, (4) front-end fallback if 502 — show 'plan still generating' and poll a status endpoint."
+}
